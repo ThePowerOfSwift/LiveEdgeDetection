@@ -1,5 +1,3 @@
-package info.hannes.liveedgedetection.activity;
-
 /*
  * TouchImageView.java
  * By: Michael Ortiz
@@ -36,11 +34,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.OverScroller;
 import android.widget.Scroller;
 
-import androidx.appcompat.widget.AppCompatImageView;
-
-import info.hannes.liveedgedetection.ScanUtils;
-
-public class TouchImageView extends AppCompatImageView {
+public class TouchImageView extends ImageView {
 
     private static final String DEBUG = "DEBUG";
 
@@ -209,7 +203,7 @@ public class TouchImageView extends AppCompatImageView {
      * @return true if image is zoomed
      */
     public boolean isZoomed() {
-        return !(ScanUtils.compareFloats(normalizedScale,1));
+        return normalizedScale != 1;
     }
 
     /**
@@ -452,7 +446,7 @@ public class TouchImageView extends AppCompatImageView {
 
         float fixTransX = getFixTrans(transX, viewWidth, getImageWidth());
         float fixTransY = getFixTrans(transY, viewHeight, getImageHeight());
-        if (!ScanUtils.compareFloats(fixTransX,0) || !ScanUtils.compareFloats(fixTransY,0)) {
+        if (fixTransX != 0 || fixTransY != 0) {
             matrix.postTranslate(fixTransX, fixTransY);
         }
     }
@@ -514,15 +508,19 @@ public class TouchImageView extends AppCompatImageView {
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         Drawable drawable = getDrawable();
+        if (drawable == null || drawable.getIntrinsicWidth() == 0 || drawable.getIntrinsicHeight() == 0) {
+            setMeasuredDimension(0, 0);
+            return;
+        }
 
-        int drawableWidth   = drawable == null ? 0 : drawable.getIntrinsicWidth();
-        int drawableHeight  = drawable == null ? 0 : drawable.getIntrinsicHeight();
-        int widthSize       = MeasureSpec.getSize(widthMeasureSpec);
-        int widthMode       = MeasureSpec.getMode(widthMeasureSpec);
-        int heightSize      = MeasureSpec.getSize(heightMeasureSpec);
-        int heightMode      = MeasureSpec.getMode(heightMeasureSpec);
-        viewWidth           = setViewSize(widthMode, widthSize, drawableWidth);
-        viewHeight          = setViewSize(heightMode, heightSize, drawableHeight);
+        int drawableWidth = drawable.getIntrinsicWidth();
+        int drawableHeight = drawable.getIntrinsicHeight();
+        int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+        int widthMode = MeasureSpec.getMode(widthMeasureSpec);
+        int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+        int heightMode = MeasureSpec.getMode(heightMeasureSpec);
+        viewWidth = setViewSize(widthMode, widthSize, drawableWidth);
+        viewHeight = setViewSize(heightMode, heightSize, drawableHeight);
 
         //
         // Set view dimensions
@@ -569,7 +567,7 @@ public class TouchImageView extends AppCompatImageView {
 
             case CENTER_INSIDE:
                 scaleX = scaleY = Math.min(1, Math.min(scaleX, scaleY));
-                break;
+
             case FIT_CENTER:
                 scaleX = scaleY = Math.min(scaleX, scaleY);
                 break;
@@ -606,7 +604,7 @@ public class TouchImageView extends AppCompatImageView {
             // to NaN in translateMatrixAfterRotate. To avoid this, call savePreviousImageValues
             // to set them equal to the current values.
             //
-            if (ScanUtils.compareFloats(prevMatchViewWidth,0) || ScanUtils.compareFloats(prevMatchViewHeight,0)) {
+            if (prevMatchViewWidth == 0 || prevMatchViewHeight == 0) {
                 savePreviousImageValues();
             }
 
@@ -722,24 +720,6 @@ public class TouchImageView extends AppCompatImageView {
     }
 
     @Override
-    public boolean canScrollVertically(int direction) {
-        matrix.getValues(m);
-        float y = m[Matrix.MTRANS_Y];
-
-        if (getImageHeight() < viewHeight) {
-            return false;
-
-        } else if (y >= -1 && direction < 0) {
-            return false;
-
-        } else if (Math.abs(y) + viewHeight + 1 >= getImageHeight() && direction > 0) {
-            return false;
-        }
-
-        return true;
-    }
-
-    @Override
     public boolean canScrollHorizontally(int direction) {
         matrix.getValues(m);
         float x = m[Matrix.MTRANS_X];
@@ -802,7 +782,7 @@ public class TouchImageView extends AppCompatImageView {
                 consumed = doubleTapListener.onDoubleTap(e);
             }
             if (state == State.NONE) {
-                float targetZoom =  ScanUtils.compareFloats(normalizedScale,minScale)? maxScale : minScale;
+                float targetZoom = (normalizedScale == minScale) ? maxScale : minScale;
                 DoubleTapZoom doubleTap = new DoubleTapZoom(targetZoom, e.getX(), e.getY(), false);
                 compatPostOnAnimation(doubleTap);
                 consumed = true;
@@ -866,8 +846,6 @@ public class TouchImageView extends AppCompatImageView {
                     case MotionEvent.ACTION_UP:
                     case MotionEvent.ACTION_POINTER_UP:
                         setState(State.NONE);
-                        break;
-                    default:
                         break;
                 }
             }
@@ -1092,7 +1070,7 @@ public class TouchImageView extends AppCompatImageView {
             finalY = Math.min(Math.max(finalY, 0), origH);
         }
 
-        return new PointF(finalX , finalY);
+        return new PointF(finalX, finalY);
     }
 
     /**
